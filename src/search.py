@@ -3,32 +3,72 @@ import json
 
 class SearchIndex:
     def __init__(self, documents, inverted_index):
-        # id -> url
         self.documents = {int(k): v for k, v in documents.items()}
 
-        # word -> set of doc_ids
+        # word -> { doc_id -> frequency }
         self.inverted_index = {
-            word: set(doc_ids)
-            for word, doc_ids in inverted_index.items()
+            word: {int(doc): freq for doc, freq in postings.items()}
+            for word, postings in inverted_index.items()
         }
 
+    def print_raw(self, word):
+        """
+        Return the raw inverted index entry for a word:
+        {doc_id: frequency}
+        """
+        postings = self.inverted_index.get(word.lower(), {})
+        return dict(postings)
+
+
     def search(self, word):
-        doc_ids = self.inverted_index.get(word.lower(), set())
-        return {self.documents[doc_id] for doc_id in doc_ids}
+        """
+        Return pages ranked by frequency descending.
+        """
+        postings = self.inverted_index.get(word.lower(), {})
+        ranked = sorted(
+            postings.items(),
+            key=lambda item: item[1],
+            reverse=True
+        )
+
+        return [
+            (self.documents[doc_id], freq)
+            for doc_id, freq in ranked
+        ]
 
     def search_all(self, keywords):
+        """
+        AND query: rank by summed word frequency.
+        """
         keywords = [k.lower() for k in keywords if k]
         if not keywords:
-            return set()
+            return []
 
-        result = self.inverted_index.get(keywords[0], set()).copy()
+        # Get common document IDs
+        doc_sets = [
+            set(self.inverted_index.get(word, {}).keys())
+            for word in keywords
+        ]
 
-        for word in keywords[1:]:
-            result &= self.inverted_index.get(word, set())
-            if not result:
-                break
+        common_docs = set.intersection(*doc_sets) if doc_sets else set()
+        if not common_docs:
+            return []
 
-        return {self.documents[doc_id] for doc_id in result}
+        # Sum frequencies across all query terms
+        scores = {}
+
+        for doc_id in common_docs:
+            scores[doc_id] = sum(
+                self.inverted_index[word][doc_id]
+                for word in keywords
+            )
+
+        ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+
+        return [
+            (self.documents[doc_id], score)
+            for doc_id, score in ranked
+        ]
 
 
 def load_index_from_file(path):
@@ -37,5 +77,5 @@ def load_index_from_file(path):
 
     return SearchIndex(
         documents=data["documents"],
-        inverted_index=data["inverted_index"],
+        inverted_index=data["inverted_index"]
     )

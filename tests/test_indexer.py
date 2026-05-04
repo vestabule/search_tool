@@ -8,15 +8,16 @@ from src.indexer import InvertedIndex
 @pytest.fixture
 def page_1_quotes():
     return [
-        {"text": "Life is what happens when you're busy."},
-        {"text": "Get busy living or get busy dying."},
+        {"text": "Life is life is beautiful"},
+        {"text": "Life happens"},
     ]
 
 @pytest.fixture
 def page_2_quotes():
     return [
-        {"text": "Life is really simple, but we insist on making it complicated."}
+        {"text": "Life is simple"},
     ]
+
 
 
 @pytest.fixture
@@ -69,23 +70,26 @@ def test_no_duplicate_document_ids(indexer, page_1_quotes):
     assert len(indexer.documents) == 1
     assert indexer.url_to_doc_id[url] == 0
 
-def test_inverted_index_uses_doc_ids(indexer, page_1_quotes):
+def test_word_frequency_count(indexer, page_1_quotes):
     url = "https://example.com/page1"
     indexer.add_page(url, page_1_quotes)
 
-    life_docs = indexer.inverted_index["life"]
-    assert life_docs == {0}
+    # "life" appears 3 times
+    assert indexer.inverted_index["life"][0] == 3
 
-def test_keyword_maps_to_multiple_documents(indexer, page_1_quotes, page_2_quotes):
+def test_frequency_across_pages(indexer, page_1_quotes, page_2_quotes):
     url1 = "https://example.com/page1"
     url2 = "https://example.com/page2"
 
-    indexer.add_page(url1, page_1_quotes)
-    indexer.add_page(url2, page_2_quotes)
+    indexer.add_page(url1, page_1_quotes)  # life x3
+    indexer.add_page(url2, page_2_quotes)  # life x1
 
-    assert indexer.inverted_index["life"] == {0, 1}
+    assert indexer.inverted_index["life"] == {
+        0: 3,
+        1: 1,
+    }
 
-def test_build_writes_pointer_based_index(indexer, page_1_quotes):
+def test_build_stores_frequencies(indexer, page_1_quotes):
     url = "https://example.com/page1"
     indexer.add_page(url, page_1_quotes)
 
@@ -96,4 +100,5 @@ def test_build_writes_pointer_based_index(indexer, page_1_quotes):
         data = json.load(f)
 
     assert data["documents"]["0"] == url
-    assert data["inverted_index"]["life"] == [0]
+    assert data["inverted_index"]["life"]["0"] == 3
+

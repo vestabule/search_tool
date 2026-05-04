@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # Loop shell until quits
     while True:
 
-        i = input("> ").lower().strip()
+        i = input("\n> ").lower().strip()
 
         if i == "build":
             # Crawl the website
@@ -44,12 +44,12 @@ if __name__ == "__main__":
                 print("No index found, please load an index first")
                 continue
 
-            results = searcher.search(words[0])
+            results = searcher.print_raw(words[0])
             if len(results) == 0:
                 print(f"No results found for '{words[0]}'")
                 continue
-            for r in results:
-                print(r)
+            for k, v in results.items():
+                print(f"{k}: {v}")
 
         elif i[:5] == "find ":
             words = i.split(" ")[1:]
@@ -65,10 +65,12 @@ if __name__ == "__main__":
             if len(results) == 0:
                 print(f"No results found")
                 continue
+            
+            # Only care about web pages (r[0]), not the frequency (r[1])
             for r in results:
-                print(r)
+                print(r[0])
 
-        elif i == "quit":
+        elif i == "quit" or i == "exit":
             break
         else:
-            print("Command not recognised. Valid commands are 'build', 'load', 'print' and 'find'")
+            print("Command not recognised. Valid commands are 'build', 'load', 'print', 'find' and 'quit'")

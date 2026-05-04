@@ -11,7 +11,7 @@ class InvertedIndex:
         self.url_to_doc_id = {}
         self.documents = {}
 
-        self.inverted_index = defaultdict(set)
+        self.inverted_index = defaultdict(lambda: defaultdict(int))
 
     
     def add_page(self, url, quotes):
@@ -29,7 +29,7 @@ class InvertedIndex:
 
         for quote in quotes:
             for word in self._tokenise(quote["text"]):
-                self.inverted_index[word].add(doc_id)
+                self.inverted_index[word][doc_id] += 1
 
     # Some basic tokenisation: de-capitalise, and remove common punctuation
     def _tokenise(self, text):
@@ -45,8 +45,8 @@ class InvertedIndex:
         data = {
             "documents": self.documents,
             "inverted_index": {
-                word: sorted(doc_ids)
-                for word, doc_ids in self.inverted_index.items()
+                word: dict(freqs)
+                for word, freqs in self.inverted_index.items()
             },
         }
 
