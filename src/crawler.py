@@ -54,6 +54,26 @@ class QuoteCrawler:
 
         return quotes, soup
 
+    def extract_links(self, soup, base_url):
+        """
+        Extract all relevant internal links from a page.
+        """
+        discovered = set()
+
+        for a in soup.select("a[href]"):
+            href = a["href"]
+            url = urljoin(base_url, href)
+            parsed = urlparse(url)
+
+            if not self.is_allowed(url):
+                continue
+
+            if url not in self.visited:
+                discovered.add(url)
+
+        return discovered
+
+
     def crawl(self, indexer):
         """Main crawl loop (pagination-based)."""
         queue = [self.seed_url]
@@ -62,9 +82,6 @@ class QuoteCrawler:
             url = queue.pop(0)
 
             if url in self.visited:
-                continue
-
-            if not self.is_allowed(url):
                 continue
 
             self.visited.add(url)
@@ -77,16 +94,23 @@ class QuoteCrawler:
 
             quotes, soup = self.parse_quotes(html)
 
-            #for q in quotes:
-            #    self.quotes.append(q)
+            # Index information
             indexer.add_page(url, quotes)
 
-            # Find "Next" page link
-            next_link = soup.select_one("li.next > a")
-            if next_link:
-                next_url = urljoin(url, next_link["href"])
-                if next_url not in self.visited:
-                    queue.append(next_url)
+            # Find page links
+        
+            new_links = self.extract_links(soup, url)
+
+            for link in sorted(new_links):
+                if link not in self.visited:
+                    queue.append(link)
+
+            # next_link = soup.select_one("li.next > a")
+            # if next_link:
+            #     next_url = urljoin(url, next_link["href"])
+            #     if next_url not in self.visited:
+            #         queue.append(next_url)
+                
 
 
 if __name__ == "__main__":

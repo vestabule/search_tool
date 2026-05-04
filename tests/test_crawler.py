@@ -1,5 +1,6 @@
 import pytest
 import time
+from bs4 import BeautifulSoup
 
 from src.crawler import QuoteCrawler, SEED_URL, POLITENESS_DELAY
 from src.indexer import InvertedIndex
@@ -33,6 +34,20 @@ SAMPLE_HTML_PAGE_2 = """
 </html>
 """
 
+@pytest.fixture
+def sample_html():
+    return """
+    <html>
+      <body>
+        <a href="/page/2/">Next</a>
+        <a href="/author/Albert-Einstein">Albert Einstein</a>
+        <a href="/tag/life/">life</a>
+        <a href="/tag/life/page/2/">life page 2</a>
+        <a href="https://example.com/">External</a>
+        <a href="/login">Login</a>
+      </body>
+    </html>
+    """
 
 # Create a web crawler to pass as a parameter
 @pytest.fixture
@@ -112,4 +127,40 @@ def test_no_duplicate_visits(monkeypatch, crawler, indexer):
 
     # Same page should not be fetched twice
     assert len(calls) == len(set(calls))
+
+def test_extracts_relevant_internal_links(crawler, sample_html):
+    soup = BeautifulSoup(sample_html, "html.parser")
+    base_url = "https://quotes.toscrape.com/"
+
+    links = crawler.extract_links(soup, base_url)
+
+    assert "https://quotes.toscrape.com/page/2/" in links
+    assert "https://quotes.toscrape.com/author/Albert-Einstein" in links
+    assert "https://quotes.toscrape.com/tag/life/" in links
+    assert "https://quotes.toscrape.com/tag/life/page/2/" in links
+
+def test_ignores_external_links(crawler, sample_html):
+    soup = BeautifulSoup(sample_html, "html.parser")
+    base_url = "https://quotes.toscrape.com/"
+
+    links = crawler.extract_links(soup, base_url)
+
+    assert all("example.com" not in link for link in links)
+
+def test_relative_urls_resolved(crawler):
+    html = """
+    <html>
+      <body>
+        <a href="/author/Mark-Twain">Mark Twain</a>
+      </body>
+    </html>
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    base_url = "https://quotes.toscrape.com/page/1/"
+
+    links = crawler.extract_links(soup, base_url)
+
+    assert links == {
+        "https://quotes.toscrape.com/author/Mark-Twain"
+    }
 
