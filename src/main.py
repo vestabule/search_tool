@@ -5,7 +5,7 @@ from crawler import QuoteCrawler
 from indexer import InvertedIndex
 from search import SearchIndex, load_index_from_file
 
-datafile = "data/index.json"
+data_file = "data/index.json"
 
 def parse_find_command(input_line):
     """
@@ -94,13 +94,13 @@ def handle_build_command():
 
 def handle_load_command():
     # Check the index has been built first
-    if not os.path.exists(datafile):
+    if not os.path.exists(data_file):
         print("Index could not be found to load. Run the build command to create the index")
         return
 
     # Load file
-    searcher = load_index_from_file(datafile)
-    print(f"Index data loaded from {datafile}")
+    searcher = load_index_from_file(data_file)
+    print(f"Index data loaded from {data_file}")
 
     # Return the searcher
     return searcher

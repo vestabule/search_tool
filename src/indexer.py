@@ -28,8 +28,25 @@ class InvertedIndex:
             doc_id = self.url_to_doc_id[url]
 
         for quote in quotes:
+            # Quote text
             for word in self._tokenise(quote["text"]):
                 self.inverted_index[word][doc_id] += 1
+
+            # Author
+            # Both split up the author
+            part_author = [pa for pa in self._tokenise(quote["author"])]
+            for word in part_author:
+                self.inverted_index[word][doc_id] += 1
+            # And add author name as single entry
+            whole_name = " ".join(part_author)
+            if whole_name not in part_author and not whole_name == "":
+                self.inverted_index[whole_name][doc_id] += 1
+            
+            # Tags
+            for tag in quote.get("tags", []):
+                for word in self._tokenise(tag):
+                    self.inverted_index[word][doc_id] += 1
+            
 
     # Some basic tokenisation: de-capitalise, and remove common punctuation
     def _tokenise(self, text):
