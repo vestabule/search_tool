@@ -4,20 +4,18 @@ from src.search import SearchIndex
 
 @pytest.fixture
 def search_index():
-    inverted_index = {
-        "life": {
-            "https://example.com/page1",
-            "https://example.com/page2",
-        },
-        "simple": {
-            "https://example.com/page2",
-        },
-        "truth": {
-            "https://example.com/page3",
-        },
+    documents = {
+        "0": "https://example.com/page1",
+        "1": "https://example.com/page2",
     }
 
-    return SearchIndex(inverted_index)
+    inverted_index = {
+        "life": [0, 1],
+        "simple": [1],
+        "truth": [0],
+    }
+
+    return SearchIndex(documents, inverted_index)
 
 def test_single_keyword_search(search_index):
     results = search_index.search("life")
@@ -43,7 +41,7 @@ def test_search_all_keywords(search_index):
     }
 
 def test_search_all_no_overlap(search_index):
-    results = search_index.search_all(["life", "truth"])
+    results = search_index.search_all(["simple", "truth"])
 
     assert results == set()
 
@@ -61,5 +59,5 @@ def test_search_all_single_keyword(search_index):
     results = search_index.search_all(["truth"])
 
     assert results == {
-        "https://example.com/page3",
+        "https://example.com/page1",
     }

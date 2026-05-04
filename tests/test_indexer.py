@@ -3,7 +3,6 @@ import pytest
 import json
 
 from src.indexer import InvertedIndex
-from src.search import load_index_from_file
 
 # Test data
 @pytest.fixture
@@ -24,14 +23,18 @@ def page_2_quotes():
 def indexer(tmp_path):
     return InvertedIndex(output_dir=tmp_path, filename="index.json")
 
-# Test author group quotes
-def test_add_single_page(indexer, page_1_quotes):
-    url = "https://example.com/page1"
 
-    indexer.add_page(url, page_1_quotes)
+def test_document_id_assignment(indexer, page_1_quotes, page_2_quotes):
+    url1 = "https://example.com/page1"
+    url2 = "https://example.com/page2"
 
-    assert "life" in indexer.inverted_index
-    assert indexer.inverted_index["life"] == {url}
+    indexer.add_page(url1, page_1_quotes)
+    indexer.add_page(url2, page_2_quotes)
+
+    assert indexer.documents == {
+        0: url1,
+        1: url2,
+    }
 
 # Test keywords in inverted index
 def test_add_multiple_pages(indexer, page_1_quotes, page_2_quotes):
@@ -41,7 +44,8 @@ def test_add_multiple_pages(indexer, page_1_quotes, page_2_quotes):
     indexer.add_page(url1, page_1_quotes)
     indexer.add_page(url2, page_2_quotes)
 
-    assert indexer.inverted_index["life"] == {url1, url2}
+    assert len(indexer.inverted_index["life"]) == 2
+    assert indexer.documents == {0: url1, 1: url2}
 
 # Test tokenisation
 def test_tokenisation_normalizes_text(indexer):
@@ -56,34 +60,40 @@ def test_build_creates_index_file(indexer, page_1_quotes):
     assert os.path.exists(path)
     assert path.endswith("index.json")
 
-def test_no_duplicate_urls(indexer, page_1_quotes):
+def test_no_duplicate_document_ids(indexer, page_1_quotes):
     url = "https://example.com/page1"
 
     indexer.add_page(url, page_1_quotes)
     indexer.add_page(url, page_1_quotes)
 
-    assert indexer.inverted_index["busy"] == {url}
+    assert len(indexer.documents) == 1
+    assert indexer.url_to_doc_id[url] == 0
 
-def test_build_writes_index_file(indexer, page_1_quotes):
+def test_inverted_index_uses_doc_ids(indexer, page_1_quotes):
+    url = "https://example.com/page1"
+    indexer.add_page(url, page_1_quotes)
+
+    life_docs = indexer.inverted_index["life"]
+    assert life_docs == {0}
+
+def test_keyword_maps_to_multiple_documents(indexer, page_1_quotes, page_2_quotes):
+    url1 = "https://example.com/page1"
+    url2 = "https://example.com/page2"
+
+    indexer.add_page(url1, page_1_quotes)
+    indexer.add_page(url2, page_2_quotes)
+
+    assert indexer.inverted_index["life"] == {0, 1}
+
+def test_build_writes_pointer_based_index(indexer, page_1_quotes):
     url = "https://example.com/page1"
     indexer.add_page(url, page_1_quotes)
 
     path = indexer.build()
-
     assert os.path.exists(path)
 
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    assert "life" in data
-    assert data["life"] == [url]
-
-def test_load_and_search_index(indexer, page_1_quotes):
-    url = "https://example.com/page1"
-    indexer.add_page(url, page_1_quotes)
-    path = indexer.build()
-
-    search_index = load_index_from_file(path)
-
-    results = search_index.search("life")
-    assert results == {url}
+    assert data["documents"]["0"] == url
+    assert data["inverted_index"]["life"] == [0]
