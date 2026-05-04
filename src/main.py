@@ -1,6 +1,12 @@
+import os
+import json
 
+from crawler import QuoteCrawler
+from indexer import InvertedIndex
+from search import SearchIndex, load_index_from_file
 
-
+indexer = InvertedIndex()
+searcher = None
 
 if __name__ == "__main__":
 
@@ -10,10 +16,21 @@ if __name__ == "__main__":
         i = input("> ").lower().strip()
 
         if i == "build":
-            pass
+            # Crawl the website
+            crawler = QuoteCrawler()
+            crawler.crawl(indexer)            
+           
+            path = indexer.build()
+            print(f"Index written to {path}")
 
         elif i == "load":
-            pass
+            # Check the index has been built first
+            if not os.path.exists("data/index.json"):
+                print("Error: index file does not exist. Run the build command to create the index")
+                continue
+
+            searcher = load_index_from_file("data/index.json")
+            print("Index data loaded from data/index.json")
 
         elif i[:6] == "print ":
             words = i.split(" ")[1:]
@@ -23,8 +40,16 @@ if __name__ == "__main__":
             elif len(words) == 0:
                 print("Error: print command requires an argument")
 
-            print(words[0])
-            pass
+            if searcher is None:
+                print("No index found, please load an index first")
+                continue
+
+            results = searcher.search(words[0])
+            if len(results) == 0:
+                print(f"No results found for '{words[0]}'")
+                continue
+            for r in results:
+                print(r)
 
         elif i[:5] == "find ":
             words = i.split(" ")[1:]
@@ -32,8 +57,16 @@ if __name__ == "__main__":
                 print("Error: find command requires one or more arguements")
                 continue
             
-            print(words)
-            pass
+            if searcher is None:
+                print("No index found, please load an index first")
+                continue
+
+            results = searcher.search_all(words)
+            if len(results) == 0:
+                print(f"No results found")
+                continue
+            for r in results:
+                print(r)
 
         elif i == "quit":
             break

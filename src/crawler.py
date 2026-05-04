@@ -9,7 +9,7 @@ POLITENESS_DELAY = 6  # seconds
 
 
 class QuoteCrawler:
-    def __init__(self, seed_url, politeness_delay=6):
+    def __init__(self, seed_url=SEED_URL, politeness_delay=6):
         self.seed_url = seed_url
         self.politeness_delay = politeness_delay
         self.visited = set()
@@ -21,6 +21,8 @@ class QuoteCrawler:
         self.session.headers.update({
             "User-Agent": "EducationalCrawler/1.0 (polite scraping demo)"
         })
+
+        self.quotes = []
 
     def is_allowed(self, url):
         """Ensure we stay within the seed domain."""
@@ -52,7 +54,7 @@ class QuoteCrawler:
 
         return quotes, soup
 
-    def crawl(self):
+    def crawl(self, indexer):
         """Main crawl loop (pagination-based)."""
         queue = [self.seed_url]
 
@@ -75,8 +77,9 @@ class QuoteCrawler:
 
             quotes, soup = self.parse_quotes(html)
 
-            for q in quotes:
-                print(q)
+            #for q in quotes:
+            #    self.quotes.append(q)
+            indexer.add_page(url, quotes)
 
             # Find "Next" page link
             next_link = soup.select_one("li.next > a")

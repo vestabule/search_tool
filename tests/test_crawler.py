@@ -2,6 +2,7 @@ import pytest
 import time
 
 from src.crawler import QuoteCrawler, SEED_URL, POLITENESS_DELAY
+from src.indexer import InvertedIndex
 
 
 SAMPLE_HTML_PAGE_1 = """
@@ -37,6 +38,10 @@ SAMPLE_HTML_PAGE_2 = """
 @pytest.fixture
 def crawler():
     return QuoteCrawler(SEED_URL, POLITENESS_DELAY)
+
+@pytest.fixture
+def indexer():
+    return InvertedIndex()
 
 # Test it stays on the right domain
 def test_is_allowed(crawler):
@@ -78,7 +83,7 @@ def test_fetch_respects_politeness_delay(crawler, monkeypatch):
     assert slept == [POLITENESS_DELAY]
 
 # Test the crawler can follow pagination
-def test_crawl_pagination(monkeypatch, crawler):
+def test_crawl_pagination(monkeypatch, crawler, indexer):
     responses = {
         SEED_URL: SAMPLE_HTML_PAGE_1,
         SEED_URL + "page/2/": SAMPLE_HTML_PAGE_2,
@@ -89,12 +94,12 @@ def test_crawl_pagination(monkeypatch, crawler):
 
     monkeypatch.setattr(crawler, "fetch", fake_fetch)
 
-    crawler.crawl()
+    crawler.crawl(indexer)
 
     assert len(crawler.visited) == 2
 
 # Test it doesn't duplicate visits
-def test_no_duplicate_visits(monkeypatch, crawler):
+def test_no_duplicate_visits(monkeypatch, crawler, indexer):
     calls = []
 
     def fake_fetch(url):
@@ -103,7 +108,7 @@ def test_no_duplicate_visits(monkeypatch, crawler):
 
     monkeypatch.setattr(crawler, "fetch", fake_fetch)
 
-    crawler.crawl()
+    crawler.crawl(indexer)
 
     # Same page should not be fetched twice
     assert len(calls) == len(set(calls))
