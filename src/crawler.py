@@ -98,21 +98,9 @@ class QuoteCrawler:
             indexer.add_page(url, quotes)
 
             # Find page links
-        
             new_links = self.extract_links(soup, url)
 
             for link in sorted(new_links):
                 if link not in self.visited:
                     queue.append(link)
-
-            # next_link = soup.select_one("li.next > a")
-            # if next_link:
-            #     next_url = urljoin(url, next_link["href"])
-            #     if next_url not in self.visited:
-            #         queue.append(next_url)
                 
-
-
-if __name__ == "__main__":
-    crawler = QuoteCrawler(SEED_URL, POLITENESS_DELAY)
-    crawler.crawl()
